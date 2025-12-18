@@ -20,18 +20,18 @@ export class BonCommandeService {
     const numero = `${year}BC${String(count + 1).padStart(5, '0')}`;
     return await this.prisma.bonCommande.create({
       data: {
-        numero, expressionId: dto.expressionId, fournisseur: dto.fournisseur,
+        numero, expressionId: dto.expressionId, fournisseurId: dto.fournisseurId,
         adresseLivraison: dto.adresseLivraison, tauxTVA: dto.tauxTVA || 20.0, remise: dto.remise || 0.0,
         observations: dto.observations,
         lignes: { create: dto.lignes.map((ligne) => ({ description: ligne.description, quantite: ligne.quantite, prixUnitaire: ligne.prixUnitaire, matiereCode: ligne.matiereCode, matiereNom: ligne.matiereNom, unite: ligne.unite })) }
       },
-      include: { lignes: true, expression: { include: { division: true, service: true, createur: true } } }
+      include: { lignes: true, fournisseur: true, receptions: true, expression: { include: { division: true, service: true, createur: true } } }
     });
   }
 
   async findAll() {
     return await this.prisma.bonCommande.findMany({
-      include: { lignes: true, expression: { include: { division: true, service: true, createur: true } } },
+      include: { lignes: true, fournisseur: true, receptions: true, expression: { include: { division: true, service: true, createur: true } } },
       orderBy: { dateEmission: 'desc' }
     });
   }
@@ -39,7 +39,7 @@ export class BonCommandeService {
   async findOne(id: number) {
     const bonCommande = await this.prisma.bonCommande.findUnique({
       where: { id },
-      include: { lignes: true, expression: { include: { division: true, service: true, createur: true } } }
+      include: { lignes: true, fournisseur: true, receptions: { include: { lignes: true } }, expression: { include: { division: true, service: true, createur: true } } }
     });
     if (!bonCommande) throw new NotFoundException('Bon de commande introuvable');
     return bonCommande;
@@ -48,7 +48,7 @@ export class BonCommandeService {
   async findByExpression(expressionId: number) {
     return await this.prisma.bonCommande.findUnique({
       where: { expressionId },
-      include: { lignes: true, expression: { include: { division: true, service: true, createur: true } } }
+      include: { lignes: true, fournisseur: true, receptions: { include: { lignes: true } }, expression: { include: { division: true, service: true, createur: true } } }
     });
   }
 
@@ -56,8 +56,8 @@ export class BonCommandeService {
     await this.findOne(id);
     return await this.prisma.bonCommande.update({
       where: { id },
-      data: { fournisseur: dto.fournisseur, adresseLivraison: dto.adresseLivraison, tauxTVA: dto.tauxTVA, remise: dto.remise, observations: dto.observations },
-      include: { lignes: true, expression: { include: { division: true, service: true, createur: true } } }
+      data: { fournisseurId: dto.fournisseurId, adresseLivraison: dto.adresseLivraison, tauxTVA: dto.tauxTVA, remise: dto.remise, observations: dto.observations },
+      include: { lignes: true, fournisseur: true, receptions: true, expression: { include: { division: true, service: true, createur: true } } }
     });
   }
 
@@ -73,13 +73,13 @@ export class BonCommandeService {
     const updated = await this.prisma.bonCommande.update({
       where: { id },
       data: {
-        fournisseur: dto.fournisseur || bc.fournisseur,
+        fournisseurId: dto.fournisseurId ?? bc.fournisseurId,
         adresseLivraison: dto.adresseLivraison || bc.adresseLivraison,
         tauxTVA: dto.tauxTVA ?? bc.tauxTVA,
         remise: dto.remise ?? bc.remise,
         observations: dto.observations ?? bc.observations,
       },
-      include: { lignes: true, expression: { include: { division: true, service: true, createur: true } } }
+      include: { lignes: true, fournisseur: true, receptions: true, expression: { include: { division: true, service: true, createur: true } } }
     });
 
     // Update lignes if provided

@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDiscussionDto } from './dto/create-discussion.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class DiscussionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => NotificationsService))
+    private notificationsService: NotificationsService,
+  ) {}
 
   async create(createDiscussionDto: CreateDiscussionDto, auteurId: number) {
     // Vérifier que l'expression existe
@@ -18,7 +23,7 @@ export class DiscussionService {
     }
 
     // Créer le message de discussion
-    return this.prisma.discussion.create({
+    const discussion = await this.prisma.discussion.create({
       data: {
         message: createDiscussionDto.message,
         auteurId: auteurId,
@@ -37,6 +42,18 @@ export class DiscussionService {
         }
       }
     });
+
+    // Send notification to other participants
+    const senderName = `${discussion.auteur.prenom || ''} ${discussion.auteur.nom || ''}`.trim() || 'Utilisateur';
+    await this.notificationsService.notifyNewMessage(
+      createDiscussionDto.expressionId,
+      expression.titre,
+      createDiscussionDto.message,
+      auteurId,
+      senderName,
+    );
+
+    return discussion;
   }
 
   async findByExpression(expressionId: number, userId: number, userRole: string) {

@@ -35,8 +35,8 @@ export class CreateBonCommandeDto {
   expressionId: number;
 
   @IsOptional()
-  @IsString()
-  fournisseur?: string;
+  @IsNumber()
+  fournisseurId?: number;
 
   @IsOptional()
   @IsString()

@@ -7,11 +7,33 @@ import { UpdateMatiereDto } from './dto/update-matiere.dto';
 export class MatiereService {
   constructor(private prisma: PrismaService) {}
 
+  private async generateCode(): Promise<string> {
+    const lastMatiere = await this.prisma.matiere.findFirst({
+      where: {
+        code: { startsWith: 'MAT-' },
+      },
+      orderBy: { code: 'desc' },
+    });
+
+    let nextNumber = 1;
+    if (lastMatiere?.code) {
+      const match = lastMatiere.code.match(/MAT-(\d+)/);
+      if (match) {
+        nextNumber = parseInt(match[1], 10) + 1;
+      }
+    }
+
+    return `MAT-${nextNumber.toString().padStart(4, '0')}`;
+  }
+
   async create(createMatiereDto: CreateMatiereDto) {
     try {
+      const code = createMatiereDto.code || await this.generateCode();
+      
       return await this.prisma.matiere.create({
         data: {
           ...createMatiereDto,
+          code,
           type: createMatiereDto.type as any,
           categorie: createMatiereDto.categorie as any,
           unite: createMatiereDto.unite as any,

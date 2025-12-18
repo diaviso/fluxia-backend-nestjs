@@ -11,9 +11,12 @@ import { ServiceModule } from './service/service.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { DiscussionModule } from './discussion/discussion.module';
 import { BonCommandeModule } from './bon-commande/bon-commande.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { FournisseurModule } from './fournisseur/fournisseur.module';
+import { ReceptionModule } from './reception/reception.module';
 
 @Module({
-  imports: [AuthModule, MatiereModule, LigneEBModule, ExpressionDeBesoinModule, DivisionModule, AdminModule, ServiceModule, PrismaModule, DiscussionModule, BonCommandeModule],
+  imports: [AuthModule, MatiereModule, LigneEBModule, ExpressionDeBesoinModule, DivisionModule, AdminModule, ServiceModule, PrismaModule, DiscussionModule, BonCommandeModule, NotificationsModule, FournisseurModule, ReceptionModule],
   controllers: [AppController],
   providers: [AppService],
 })

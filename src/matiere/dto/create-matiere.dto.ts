@@ -1,8 +1,9 @@
 import { IsString, IsEnum, IsNumber, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateMatiereDto {
+  @IsOptional()
   @IsString()
-  code: string;
+  code?: string;
 
   @IsString()
   designation: string;

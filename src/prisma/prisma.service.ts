@@ -12,6 +12,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   public ligneEB: any;
   public matiere: any;
   public discussion: any;
+  public bonCommande: any;
+  public ligneBonCommande: any;
+  public notification: any;
+  public fournisseur: any;
+  public reception: any;
+  public ligneReception: any;
   private client: any;
 
   constructor() {
@@ -29,6 +35,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     this.ligneEB = this.client.ligneEB;
     this.matiere = this.client.matiere;
     this.discussion = this.client.discussion;
+    this.bonCommande = this.client.bonCommande;
+    this.ligneBonCommande = this.client.ligneBonCommande;
+    this.notification = this.client.notification;
+    this.fournisseur = this.client.fournisseur;
+    this.reception = this.client.reception;
+    this.ligneReception = this.client.ligneReception;
   }
 
   async onModuleInit() {

@@ -15,38 +15,41 @@ datasource db {
 }
 
 model User {
-  id                  Int                  @id @default(autoincrement())
-  email               String               @unique
-  nom                 String?
-  prenom              String?
-  photo               String?
-  googleId            String               @unique
-  role                Role                 @default(AGENT)
-  actif               Boolean              @default(true)
-  division            Division?            @relation(fields: [divisionId], references: [id])
-  divisionId          Int?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  expressionsDeBesoin ExpressionDeBesoin[]
-  divisionDirigee     Division?            @relation("DivisionDirecteur")
-  discussions         Discussion[]
+  id                    Int                  @id @default(autoincrement())
+  email                 String               @unique
+  nom                   String?
+  prenom                String?
+  photo                 String?
+  googleId              String               @unique
+  role                  Role                 @default(AGENT)
+  actif                 Boolean              @default(true)
+  division              Division?            @relation(fields: [divisionId], references: [id])
+  divisionId            Int?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  expressionsDeBesoin   ExpressionDeBesoin[]
+  divisionDirigee       Division?            @relation("DivisionDirecteur")
+  discussions           Discussion[]
+  notifications         Notification[]       @relation("UserNotifications")
+  notificationsSent     Notification[]       @relation("NotificationSender")
 }
 
 model ExpressionDeBesoin {
-  id           Int          @id @default(autoincrement())
-  numero       String?
-  titre        String
-  division     Division     @relation(fields: [divisionId], references: [id])
-  divisionId   Int
-  service      Service?     @relation(fields: [serviceId], references: [id])
-  serviceId    Int?
-  dateCreation DateTime     @default(now())
-  statut       StatutEB     @default(BROUILLON)
-  createur     User         @relation(fields: [createurId], references: [id])
-  createurId   Int
-  lignes       LigneEB[]
-  discussions  Discussion[]
-  bonCommande  BonCommande?
+  id            Int            @id @default(autoincrement())
+  numero        String?
+  titre         String
+  division      Division       @relation(fields: [divisionId], references: [id])
+  divisionId    Int
+  service       Service?       @relation(fields: [serviceId], references: [id])
+  serviceId     Int?
+  dateCreation  DateTime       @default(now())
+  statut        StatutEB       @default(BROUILLON)
+  createur      User           @relation(fields: [createurId], references: [id])
+  createurId    Int
+  lignes        LigneEB[]
+  discussions   Discussion[]
+  bonCommande   BonCommande?
+  notifications Notification[]
 }
 
 model LigneEB {
@@ -161,37 +164,100 @@ model Discussion {
   @@index([auteurId])
 }
 
+model Fournisseur {
+  id            Int           @id @default(autoincrement())
+  code          String        @unique
+  raisonSociale String
+  adresse       String?
+  telephone     String?
+  email         String?
+  ice           String?       // Identifiant Commun de l'Entreprise
+  rc            String?       // Registre de Commerce
+  actif         Boolean       @default(true)
+  bonsCommande  BonCommande[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
 model BonCommande {
   id               Int                @id @default(autoincrement())
   numero           String             @unique
   expression       ExpressionDeBesoin @relation(fields: [expressionId], references: [id])
   expressionId     Int                @unique
   dateEmission     DateTime           @default(now())
-  fournisseur      String?
+  fournisseur      Fournisseur?       @relation(fields: [fournisseurId], references: [id])
+  fournisseurId    Int?
   adresseLivraison String?
   tauxTVA          Float              @default(20.0)
   remise           Float              @default(0.0)
   observations     String?
+  statut           StatutBonCommande  @default(EN_ATTENTE)
   lignes           LigneBonCommande[]
+  receptions       Reception[]
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 }
 
 model LigneBonCommande {
-  id            Int         @id @default(autoincrement())
-  bonCommande   BonCommande @relation(fields: [bonCommandeId], references: [id], onDelete: Cascade)
-  bonCommandeId Int
-  description   String
-  quantite      Int
-  prixUnitaire  Float
-  matiereCode   String
-  matiereNom    String
-  unite         String
+  id              Int              @id @default(autoincrement())
+  bonCommande     BonCommande      @relation(fields: [bonCommandeId], references: [id], onDelete: Cascade)
+  bonCommandeId   Int
+  description     String
+  quantite        Int
+  quantiteRecue   Int              @default(0)
+  prixUnitaire    Float
+  matiereCode     String
+  matiereNom      String
+  unite           String
+  lignesReception LigneReception[]
+}
+
+model Reception {
+  id              Int              @id @default(autoincrement())
+  numero          String           @unique
+  bonCommande     BonCommande      @relation(fields: [bonCommandeId], references: [id])
+  bonCommandeId   Int
+  dateReception   DateTime         @default(now())
+  livreur         String?
+  observations    String?
+  pvGenere        Boolean          @default(false)
+  pvUrl           String?
+  lignes          LigneReception[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model LigneReception {
+  id                  Int              @id @default(autoincrement())
+  reception           Reception        @relation(fields: [receptionId], references: [id], onDelete: Cascade)
+  receptionId         Int
+  ligneBonCommande    LigneBonCommande @relation(fields: [ligneBonCommandeId], references: [id])
+  ligneBonCommandeId  Int
+  quantiteRecue       Int
+  quantiteConforme    Int
+  quantiteNonConforme Int              @default(0)
+  observations        String?
 }
 
 enum StatutBonCommande {
   EN_ATTENTE
   VALIDE
-  ANNULE
+  PARTIELLEMENT_LIVRE
   LIVRE
+  ANNULE
+}
+
+model Notification {
+  id           Int                @id @default(autoincrement())
+  type         String
+  title        String
+  message      String
+  read         Boolean            @default(false)
+  user         User               @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  userId       Int
+  expression   ExpressionDeBesoin? @relation(fields: [expressionId], references: [id], onDelete: Cascade)
+  expressionId Int?
+  fromUser     User?              @relation("NotificationSender", fields: [fromUserId], references: [id], onDelete: SetNull)
+  fromUserId   Int?
+  createdAt    DateTime           @default(now())
 }

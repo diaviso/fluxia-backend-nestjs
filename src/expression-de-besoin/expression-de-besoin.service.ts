@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateExpressionDeBesoinDto, StatutEB } from './dto/create-expression-de-besoin.dto';
 import { UpdateExpressionDeBesoinDto } from './dto/update-expression-de-besoin.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ExpressionDeBesoinService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => NotificationsService))
+    private notificationsService: NotificationsService,
+  ) {}
 
   async create(createExpressionDeBesoinDto: CreateExpressionDeBesoinDto, createurId: number) {
     // Vérifier que l'utilisateur est directeur de la division
@@ -211,8 +216,8 @@ export class ExpressionDeBesoinService {
     });
   }
 
-  async updateStatut(id: number, statut: StatutEB) {
-    return await this.prisma.expressionDeBesoin.update({
+  async updateStatut(id: number, statut: StatutEB, changedByUserId?: number) {
+    const expression = await this.prisma.expressionDeBesoin.update({
       where: { id },
       data: {
         statut,
@@ -235,6 +240,38 @@ export class ExpressionDeBesoinService {
         },
       },
     });
+
+    // Send notifications
+    if (changedByUserId) {
+      const changedByUser = await this.prisma.user.findUnique({
+        where: { id: changedByUserId },
+        select: { nom: true, prenom: true },
+      });
+      const changedByUserName = changedByUser ? `${changedByUser.prenom || ''} ${changedByUser.nom || ''}`.trim() || 'Utilisateur' : 'Utilisateur';
+
+      if (statut === 'EN_ATTENTE') {
+        // Expression submitted - notify validators
+        const creatorName = `${expression.createur.prenom || ''} ${expression.createur.nom || ''}`.trim() || 'Utilisateur';
+        await this.notificationsService.notifyExpressionSubmitted(
+          id,
+          expression.titre,
+          expression.createur.id,
+          creatorName,
+        );
+      } else {
+        // Status changed - notify creator
+        await this.notificationsService.notifyExpressionStatusChanged(
+          id,
+          expression.titre,
+          statut,
+          expression.createur.id,
+          changedByUserId,
+          changedByUserName,
+        );
+      }
+    }
+
+    return expression;
   }
 
   async search(searchTerm: string, userId?: number, userRole?: string) {

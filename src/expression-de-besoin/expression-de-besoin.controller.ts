@@ -44,8 +44,9 @@ export class ExpressionDeBesoinController {
   updateStatut(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { statut: StatutEB },
+    @CurrentUser() user: any,
   ) {
-    return this.expressionDeBesoinService.updateStatut(id, body.statut);
+    return this.expressionDeBesoinService.updateStatut(id, body.statut, user.id);
   }
 
   @Delete(':id')
